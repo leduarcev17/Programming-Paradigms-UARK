@@ -1,0 +1,1051 @@
+<!-- CSCE 31903 Programming Paradigms 		-->
+<!-- Spring 2026 							-->
+<!-- Assignment 6 by Eduardo Arce Vargas 	-->
+<!-- Date: 4/16/2026                        -->
+<!-- Description: This Assignment consists on recreate Assignment 4 but using JavaScript-->
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Assignment 6: JS Ms Pacman!</title>
+    <style>
+        body {
+			font-family: sans-serif;
+			text-align: center;
+			padding: 20px;
+		}
+		#dropZone {
+			width: 600px;
+			height: 150px;
+			border: 2px dashed #888;
+			margin: 20px auto;
+			line-height: 150px;
+			color: #888;
+			font-size: 20px;
+			border-radius: 10px;
+			user-select: none;
+		}
+		#dropZone.hover {
+			border-color: #333;
+			color: #333;
+		}
+		canvas {
+			display: block;
+			margin: 20px auto;
+			border: 1px solid black;
+		}
+    </style>
+</head>
+<body>
+
+    <h2>Drag your map JSON file here</h2>
+    <div id="dropZone">Drop map file here</div>
+
+    <br>
+    <canvas id="myCanvas" width="760" height="800"></canvas>
+    <br>
+
+    <script type="text/javascript">
+        class Sprite
+        {
+            constructor(x1, y1, w1, h1, speed1)
+            {
+                this.x = x1
+                this.y = y1
+                this.w = w1
+                this.h = h1
+                this.px = this.x
+                this.py = this.y
+                this.speed = speed1
+            }
+
+            // Getters
+            getX()
+            {
+                return this.x
+            }
+
+            getY()
+            {
+                return this.y
+            }
+
+            getH()
+            {
+                return this.h
+            }
+
+            getW()
+            {
+                return this.w
+            }
+
+            getRight()
+            {
+                return this.x + this.w
+            }
+
+            getLeft()
+            {
+                return this.x
+            }
+
+            getTop()
+            {
+                return this.y
+            }
+
+            getBottom()
+            {
+                return this.y + this.h
+            }
+
+            getPx()
+            {
+                return this.px
+            }
+
+            getPy()
+            {
+                return this.py
+            }
+
+            getSpeed()
+            {
+                return this.speed
+            }
+
+            getPrevRight()
+            {
+                return this.px + this.w
+            }
+
+            getPrevLeft()
+            {
+                return this.px
+            }
+
+            getPrevTop()
+            {
+                return this.py
+            }
+
+            getPrevBottom()
+            {
+                return this.py + this.h
+            }
+
+            // Setters
+
+            setX(x1)
+            {
+                this.x = x1
+            }
+
+            setY(y1)
+            {
+                this.y = y1
+            }
+
+            setH(h1)
+            {
+                this.h = h1
+            }
+
+            setW(w1)
+            {
+                this.w = w1
+            }
+
+            setPx(px1)
+            {
+                this.px = px1
+            }
+
+            setPy(py1)
+            {
+                this.py = py1
+            }
+
+            setPrevPosition()
+            {
+                this.px = this.x
+                this.py = this.y
+            }
+
+            // Fixing Collisions 
+            fixCollision(otherSprite)
+            {
+                if(this.getPrevRight() <= otherSprite.getLeft() && this.getRight() > otherSprite.getLeft())
+                {
+                    this.x = otherSprite.getLeft() - this.w - 1
+                    return;
+                }
+
+                if(this.getPrevLeft() >= otherSprite.getRight() && this.getLeft() < otherSprite.getRight())
+                {
+                    this.x = otherSprite.getRight() + 1
+                    return
+                }
+
+                if(this.getPrevBottom() <= otherSprite.getTop() && this.getBottom() > otherSprite.getTop())
+                {
+                    this.y = otherSprite.getTop() - this.h - 1
+                    return
+                }
+
+                if(this.getPrevTop() >= otherSprite.getBottom() && this.getTop() < otherSprite.getBottom())
+                {
+                    this.y = otherSprite.getBottom() + 1
+                    return
+                }
+            }
+
+            isMsPacman()
+            {
+                return false
+            }
+
+            isTile()
+            {
+                return false
+            }
+
+            isFruit()
+            {
+                return false
+            }
+
+            isGhost()
+            {
+                return false
+            }
+        }
+
+        class MsPacman extends Sprite
+        {
+            // Declaring static variables
+            static MAX_DIRECTIONS =4
+            static NUM_IMAGES_PER_DIRECTION = 3
+            static images = []
+
+            constructor(startX, startY)
+            {
+                const MSPACMAN_HEIGHT = 25
+                const MSPACMAN_WIDTH = 25
+                const SPEED = 10 
+                super(startX, startY, MSPACMAN_HEIGHT, MSPACMAN_WIDTH, SPEED)
+                this.initializeVars();
+            }
+
+            initializeVars()
+            {
+                this.setPrevPosition()
+                MsPacman.images = []
+                this.numFrame = 0
+                this.direction = 0
+                this.points = 0
+
+                // Load MsPacman images
+                if(MsPacman.images.length == 0)
+                {
+                    let imageNum = 1
+                    for(let i = 0; i < MsPacman.MAX_DIRECTIONS; i++)
+                    {
+                        MsPacman.images[i] = []
+                        for(let j = 0; j < MsPacman.NUM_IMAGES_PER_DIRECTION; j++)
+                        {
+                            MsPacman.images[i][j] = new Image()
+                            MsPacman.images[i][j].src = "images/mspacman" + imageNum + ".png"
+                            imageNum++
+                        }
+                    }
+                }
+            }
+
+            // Functionality methods
+            drawYourself(ctx)
+            {
+                ctx.drawImage(MsPacman.images[this.direction][this.numFrame], this.getX(), this.getY() - View.getScrollPos(), this.getW(), this.getH())
+            }
+
+            addPoints(x)
+            {
+                this.points += x
+            }
+
+            getPoints()
+            {
+                return this.points
+            }
+
+            // MsPacman Movement Control
+            updateImageNum()
+            {
+                this.numFrame++
+                if(this.numFrame >= MsPacman.NUM_IMAGES_PER_DIRECTION){
+                    this.numFrame = 0
+                }
+            }
+
+            moveRight()
+            {
+                if(this.getX() > 756){
+                    this.setX(-5)
+                }
+                else{
+                    this.direction = 2
+                    this.updateImageNum()
+                    this.setX(this.getX() + this.getSpeed())
+                }
+            }
+
+            moveLeft()
+            {
+                if(this.getX() < -10){
+                    this.setX(776)
+                }
+                else{
+                    this.direction = 0
+                    this.updateImageNum()
+                    this.setX(this.getX() - this.getSpeed())
+                }
+            }
+
+            moveUp()
+            {
+                this.direction = 1;
+                this.updateImageNum()
+                this.setY(this.getY() - this.getSpeed())
+
+                View.followMsPacman(this.getY())
+            }
+
+            moveDown()
+            {
+                this.direction = 3;
+                this.updateImageNum()
+                this.setY(this.getY() + this.getSpeed())
+
+                View.followMsPacman(this.getY())
+            }
+
+            update()
+            {
+                return true
+            }
+
+            isMsPacman()
+            {
+                return true
+            }
+        }
+
+        class Tile extends Sprite
+        {
+            // Declaring static variables 
+            static image 
+
+            constructor(startX, startY)
+            {
+                const TILE_HEIGHT = 40
+                const TILE_WIDTH = 40
+                const SPEED = 0
+                super(startX, startY, TILE_WIDTH, TILE_HEIGHT, SPEED)
+                this.initializeVars()
+            }
+
+            initializeVars()
+            {
+                // Load Tile image
+                if(Tile.image == undefined){
+                    Tile.image = new Image()
+                    Tile.image.src = "images/tile2.png"
+                }
+            }
+
+            // Functionality methods
+            drawYourself(ctx)
+            {
+                ctx.drawImage(Tile.image, this.getX(), this.getY() - View.getScrollPos(), this.getW(), this.getH())
+            }
+
+            update()
+            {
+                return true
+            }
+
+            isTile()
+            {
+                return true
+            }
+
+        }
+
+        class Fruit extends Sprite
+        {
+            //Declaring static variables
+            static FRUIT_COUNT = 7
+            static images = []
+
+            constructor(startX, startY, fruitNum)
+            {
+                const FRUIT_HEIGHT = 25
+                const FRUIT_WIDTH = 25
+                const SPEED = 8
+                super(startX, startY, FRUIT_WIDTH, FRUIT_HEIGHT, SPEED)
+                this.initializeVars(fruitNum)
+            }
+
+            initializeVars(fruitNum)
+            {
+                this.fruitNum = fruitNum
+                this.eaten = false
+                this.direction = 0
+                this.getRandomDirection()
+                this.setPrevPosition()
+
+                // Load Fruit Images 
+                if(Fruit.images.length == 0){
+                    let imageNum = 1
+                    for(let i = 0; i < Fruit.FRUIT_COUNT; i++)
+                    {
+                        Fruit.images[i] = new Image()
+                        Fruit.images[i].src = "images/fruit" + imageNum + ".png"
+                        imageNum++
+                    }
+                }
+            }
+
+            // getters
+            getFruitNum()
+            {
+                return this.fruitNum
+            }
+
+            getRandomDirection()
+            {
+                let nextDir = undefined
+                do{
+                    nextDir = Math.floor(Math.random() * 4)
+                }while(this.direction == nextDir)
+
+                this.direction = nextDir
+            }
+
+            getEaten()
+            {
+                return this.eaten
+            }
+
+            // Functionality methods 
+            beenEaten()
+            {
+                this.eaten = true
+            }
+            
+
+            drawYourself(ctx)
+            {
+                ctx.drawImage(Fruit.images[this.getFruitNum()], this.getX(), this.getY() - View.getScrollPos(), this.getW(), this.getH())
+            }
+
+            // Fruit movement Control
+            moveRight()
+            {
+                if(this.getX() > 756)
+                {
+                    this.setX(-5);
+                }
+                else
+                {
+                    this.setX(this.getX() + this.getSpeed());
+                }
+            }
+
+            moveLeft()
+            {
+                if(this.getX() < -10)
+                {
+                    this.setX(776)
+                }
+                else
+                {
+                    this.setX(this.getX() - this.getSpeed())
+                }
+            }
+
+            moveUp()
+            {
+                this.setY(this.getY() - this.getSpeed())
+            }
+
+            moveDown()
+            {
+                this.setY(this.getY() + this.getSpeed())
+            }
+
+            isFruit()
+            {
+                return true
+            }
+
+            update()
+            {
+                if(!this.eaten)
+                {
+                    switch(this.direction)
+                    {
+                        case 0:
+                            this.moveRight()
+                            break
+                        case 1:
+                            this.moveUp()
+                            break
+                        case 2:
+                            this.moveLeft()
+                            break
+                        case 3:
+                            this.moveDown()
+                            break
+                    }
+                    return true
+                }
+                return false
+            }
+        }
+
+        class Ghost extends Sprite
+        {
+            // Declaring static variables
+            static GHOST_COUNT = 5
+            static MAX_DIRECTIONS = 4
+            static NUM_IMAGES_PER_DIRECTION = 2
+            static STATE_DURATION = 1
+            static images = []
+
+            constructor(startX, startY, ghostNum)
+            {
+                const GHOST_HEIGHT = 25
+                const GHOST_WIDTH = 25
+                const SPEED = 10
+                super(startX, startY, GHOST_WIDTH, GHOST_HEIGHT, SPEED)
+                this.initializeVars(ghostNum)
+            }
+
+            initializeVars(ghostNum)
+            {
+                this.eaten = false
+                this.ghostNum = ghostNum
+                this.readyToRemove = false
+                this.direction = 0
+                this.numFrame = 0
+                let ghost_names = ["blinky", "inky", "pinky", "sue", "ghost"]
+                this.getRandomDirection()
+                this.setPrevPosition()
+
+                // Loadng Ghost images
+                if(Ghost.images.length == 0){
+                    for(let i = 0; i < Ghost.GHOST_COUNT; i++){
+                        Ghost.images[i] = []
+                        let imageNum = 1
+                        let filename = "images/" + ghost_names[i]
+
+                        for(let j = 0; j < Ghost.MAX_DIRECTIONS; j++){
+                            Ghost.images[i][j] = []
+                            
+                            for(let k = 0; k < Ghost.NUM_IMAGES_PER_DIRECTION; k++){
+                                Ghost.images[i][j][k] = new Image()
+                                Ghost.images[i][j][k].src = filename + imageNum + ".png"
+                                imageNum++
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Getters
+            getRandomDirection()
+            {
+                let nextDir = undefined
+                do{
+                    nextDir = Math.floor(Math.random() * 4)
+                }while(this.direction == nextDir)
+
+                this.direction = nextDir
+            }
+
+            getGhostNum()
+            {
+                return this.ghostNum
+            }
+
+            isEaten()
+            {
+                return this.eaten
+            }
+
+            // Functionality methods
+            drawYourself(ctx)
+            {
+                ctx.drawImage(Ghost.images[this.ghostNum][this.direction][this.numFrame], this.getX(), this.getY() - View.getScrollPos(), this.getW(), this.getH())
+            }
+
+            updateImageNum()
+            {
+                this.numFrame++
+                if(this.numFrame >= Ghost.NUM_IMAGES_PER_DIRECTION){
+                    this.numFrame = 0
+                }
+            }
+
+            // Ghost movement control
+            moveRight()
+            {
+                this.direction = 2
+                this.updateImageNum()
+                if(this.getX() > 756)
+                {
+                    this.setX(-5);
+                }
+                else
+                {
+                    this.setX(this.getX() + this.getSpeed());
+                }
+            }
+
+            moveLeft()
+            {
+                this.direction = 0
+                this.updateImageNum()
+                if(this.getX() < -10)
+                {
+                    this.setX(776)
+                }
+                else
+                {
+                    this.setX(this.getX() - this.getSpeed())
+                }
+            }
+
+            moveUp()
+            {
+                this.direction = 1
+                this.updateImageNum()
+                this.setY(this.getY() - this.getSpeed())
+            }
+
+            moveDown()
+            {
+                this.direction = 3
+                this.updateImageNum()
+                this.setY(this.getY() + this.getSpeed())
+            }
+
+            // Eaten Animation Control
+            setBlue()
+            {
+                this.direction = 0
+                this.ghostNum = 4
+            }
+
+            setWhite()
+            {
+                this.direction = 1
+            }
+
+            setEyes()
+            {
+                this.direction = 2
+            }
+
+            eatenAnimation()
+            {
+                let stateDuration = 1000
+                this.eaten = true
+                this.setBlue()
+
+                setTimeout(() => {
+                    this.setWhite();
+
+                    setTimeout(() => {
+                        this.setEyes();
+
+                        setTimeout(() => {
+                            this.readyToRemove = true;
+                        }, stateDuration);
+
+                    }, stateDuration);
+
+                }, stateDuration);
+            }
+
+            isGhost()
+            {
+                return true
+            }
+
+            update()
+            {
+                if(this.readyToRemove){
+                    return false
+                }
+
+                if(!this.eaten){
+                    switch(this.direction)
+                    {
+                        case 0:
+                            this.moveLeft()
+                            return true
+                        case 1:
+                            this.moveUp();
+                            return true;
+                        case 2:
+                            this.moveRight();
+                            return true;
+                        case 3:
+                            this.moveDown();
+                            return true;
+                    }
+                }
+                else{
+                    this.updateImageNum()
+                }
+                return true
+            }
+        }
+
+        class Model
+        {
+        
+            constructor()
+            {
+                this.AVAILABLE_GHOSTS = 4
+                this.AVAILABLE_FRUITS = 7
+                this.sprites = [];
+            }
+
+            getSpritesCount()
+            {
+                return this.sprites.length
+            }
+
+            getSprite(index)
+            {
+                return this.sprites[index]
+            }
+
+            getMsPacman()
+            {
+                return this.msPacman
+            }
+
+            
+            loadMap(mapData) 
+            {
+                //clear the current sprites before loading from file
+                this.sprites = [];
+
+                // Loading Sprites from JSON file
+                this.msPacman = new MsPacman(mapData.mspacman.x, mapData.mspacman.y)
+                this.sprites.push(this.msPacman)
+
+                for(let i = 0; i < mapData.tiles.length; i++)
+                {
+                    let t = mapData.tiles[i]
+                    let tile = new Tile(t.x, t.y)
+                    this.sprites.push(tile)
+                }
+
+                for(let j = 0; j < mapData.fruits.length; j++)
+                {
+                    let f = mapData.fruits[j]
+                    let fruit = new Fruit(f.x, f.y, f.fruitNum)
+                    this.sprites.push(fruit)
+                }
+
+                for(let k = 0; k < mapData.ghosts.length; k++)
+                {
+                    let g = mapData.ghosts[k]
+                    let ghost = new Ghost(g.x, g.y, g.ghostNum)
+                    this.sprites.push(ghost)
+                }
+                console.log("Map loaded:", mapData);
+            }
+
+            // Detecting collisions
+            detectCollision(sprite, otherSprite)
+            {
+                if(sprite.getRight() <= otherSprite.getLeft()){
+                    return false;
+                }
+                if(sprite.getLeft() >= otherSprite.getRight()){
+                    return false
+                }
+                if (sprite.getBottom() <= otherSprite.getTop()){
+                    return false
+                }
+                if(sprite.getTop() >= otherSprite.getBottom()){
+                    return false
+                }
+
+                return true
+            }
+
+            update()
+            {
+                for(let i = 0; i < this.sprites.length; i++)
+                {
+                    let sprite = this.sprites[i]
+
+                    // Set Sprites prev position
+                    if(sprite.isFruit() || sprite.isGhost())
+                    {
+                        sprite.setPrevPosition()
+                    }
+
+                    // Update sprites
+                    if(!sprite.update())
+                    {
+                        this.sprites.splice(i, 1)
+                    }
+
+                    // Detect and Fix Collisions
+                    for(let j = 0; j < this.sprites.length; j++)
+                    {
+                        let otherSprite = this.sprites[j]
+
+                        if(otherSprite != sprite && this.detectCollision(sprite, otherSprite)){
+                            if(sprite.isMsPacman() && otherSprite.isTile()){
+                                sprite.fixCollision(otherSprite)
+                            }
+
+                            else if(sprite.isFruit() && otherSprite.isTile()){
+                                let fruit = sprite
+                                sprite.fixCollision(otherSprite)
+                                fruit.getRandomDirection()
+                            }
+
+                            else if(sprite.isFruit() && otherSprite.isMsPacman())
+                            {
+                                let fruit = sprite
+                                let msPacman = otherSprite
+
+                                if(!fruit.getEaten())
+                                {
+                                    msPacman.addPoints(1)
+                                }
+
+                                fruit.beenEaten()
+                            }
+
+                            else if(sprite.isGhost() && otherSprite.isTile())
+                            {
+                                let ghost = sprite
+                                sprite.fixCollision(otherSprite)
+                                ghost.getRandomDirection()
+                            }
+
+                            else if(sprite.isMsPacman() && otherSprite.isGhost())
+                            {
+                                let ghost = otherSprite
+                                let msPacman = sprite
+
+                                if(!ghost.isEaten()){
+                                    msPacman.addPoints(5)
+                                    ghost.eatenAnimation()
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+        
+        class View
+        {
+            static scrollPos = 0
+            constructor(model)
+            {
+                this.model = model
+                this.canvas = document.getElementById("myCanvas")
+            }
+
+            update()
+            {
+                let ctx = this.canvas.getContext("2d")
+                ctx.clearRect(0, 0, 776, 800)
+
+                //dark blue background fill color
+                ctx.fillStyle = "rgb(7, 19, 95)"
+                ctx.fillRect(0, 0, 776, 800)
+                
+                // Draw Sprites on canvas
+                for(let i = 0; i < this.model.sprites.length; i++)
+                {
+                    let sprite = this.model.sprites[i]
+                    sprite.drawYourself(ctx)
+                }
+
+                // Display points
+                let msPacman = this.model.getMsPacman()
+                if(msPacman)
+                {
+                    ctx.fillStyle = "yellow"
+                    ctx.font = "bold 24px Arial"
+                    ctx.fillText("Score: " + msPacman.getPoints(), 10, 30)
+                }
+            }
+
+            // Scroll control
+            static followMsPacman(msPacmanY)
+            {
+                let target = 800 / 2
+                View.scrollPos = msPacmanY - target
+                
+                if(View.scrollPos < 0){
+                    View.scrollPos = 0
+                }
+
+                let maxScroll = 960 - 800
+                if(View.scrollPos > maxScroll){
+                    View.scrollPos = maxScroll
+                }
+            }
+
+            static getScrollPos()
+            {
+                return View.scrollPos;
+            }
+        }
+
+
+        class Controller
+        {
+            constructor(m, v)
+            {
+                this.model = m
+                this.view = v
+                this.key_right = false
+                this.key_left = false
+                this.key_up = false
+                this.key_down = false
+                let self = this
+                document.addEventListener('keydown', function(event) { self.keyDown(event) }, false)
+                document.addEventListener('keyup', function(event) { self.keyUp(event) }, false)
+            }
+
+            // Key press detection
+            keyDown(event)
+            {
+                if(event.keyCode == 39) 
+                    this.key_right = true
+                else if(event.keyCode == 37) 
+                    this.key_left = true
+                else if(event.keyCode == 38) 
+                    this.key_up = true
+                else if(event.keyCode == 40) 
+                    this.key_down = true
+            }
+
+            keyUp(event)
+            {
+                if(event.keyCode == 39) 
+                    this.key_right = false
+                else if(event.keyCode == 37) 
+                    this.key_left = false
+                else if(event.keyCode == 38) 
+                    this.key_up = false
+                else if(event.keyCode == 40) 
+                    this.key_down = false
+            }
+
+            update()
+            {
+                let msPacman = this.model.getMsPacman()
+                if(!msPacman) return;
+                msPacman.setPrevPosition()
+                if (this.key_right){
+                    msPacman.moveRight();
+                }
+
+                if (this.key_left){
+                    msPacman.moveLeft();
+                }
+
+                if (this.key_up){
+                    msPacman.moveUp();
+                }
+
+                if (this.key_down){
+                    msPacman.moveDown();
+                }
+            }
+
+        }
+
+        class Game
+        {
+            constructor()
+            {
+                this.model = new Model();
+                this.view = new View(this.model);
+                this.controller = new Controller(this.model, this.view);
+            
+                //this code will allow you to drag and drop your map instead of hardcoding it!
+                //do not change this code
+                var dropZone = document.getElementById("dropZone");
+                var self = this;
+
+                // Prevent default drag behaviors
+                ["dragenter", "dragover", "dragleave", "drop"].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function(e) { e.preventDefault(); e.stopPropagation(); });
+                });
+
+                // Highlight drop zone when dragging over
+                ["dragenter", "dragover"].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function() { dropZone.classList.add("hover"); });
+                });
+
+                ["dragleave", "drop"].forEach(function(eventName) {
+                dropZone.addEventListener(eventName, function() { dropZone.classList.remove("hover"); });
+                });
+
+                // Handle dropped files
+                dropZone.addEventListener("drop", function(e) {
+                    var file = e.dataTransfer.files[0];
+                    if (!file) return;
+                    if (!file.name.endsWith(".json")) {
+                        alert("Please drop your map JSON file here.");
+                        return;
+                    }
+
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        var data = JSON.parse(ev.target.result);
+                        self.model.loadMap(data);
+                    } catch(err) {
+                        alert("Error parsing JSON: " + err.message);
+                    }
+                };
+                    reader.readAsText(file);
+                });
+            }
+
+            onTimer()
+            {
+                this.controller.update();
+                this.model.update();
+                this.view.update();
+            }
+        }
+
+        // Run game
+        let game = new Game()
+        let timer = setInterval(function() { game.onTimer() }, 40)
+    </script>
+
+</body>
+</html>
